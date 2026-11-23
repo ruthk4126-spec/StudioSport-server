@@ -17,6 +17,16 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 COPY --from=build /app .
 
+# לתיקיית הלוגים של NLog (גם כשהמערכת מוגנת-כתיבה). בחינמי של Render אין
+# דיסק קבוע, ולכן התיקייה מוחלפת בסימלינק ל-/tmp — הקובץ עצמו לא נשמר בין
+# אתחולים, אבל האפליקציה לא נופלת מניסיון לפתוח קובץ שאין הרשאה לכתוב לו.
+RUN mkdir -p /app/logs /tmp/logs \
+    && rm -rf /app/logs \
+    && ln -s /tmp/logs /app/logs \
+    && chown -R $APP_UID:$APP_UID /tmp/logs
+
+USER $APP_UID
+
 ENV ASPNETCORE_URLS=http://+:8080
 ENV ASPNETCORE_ENVIRONMENT=Production
 EXPOSE 8080
