@@ -58,11 +58,24 @@ StudioSport.sln
 
 כיוון התלויות: `Core` אינו מפנה לאף פרויקט ואינו תלוי ב-EF Core. `Data` ו-`Service` מפנים ל-`Core`. `API` מפנה ל-`Service` ול-`Core`, ומכיר את `Data` רק לצורך רישום השירותים ב-`Program.cs`. ה-Controllers אינם מזריקים `DbContext` — כל גישה לנתונים עוברת דרך שכבת ה-Service והממשקים ב-Core.
 
-## הרצה מקומית
+## הרצה מקומית — שני ריפואים
+
+הפרויקט מפוצל לשני ריפואים:
+
+| ריפו | תוכן |
+|---|---|
+| [StudioSport-server](https://github.com/ruthk4126-spec/StudioSport-server) | שכבת השרת (.NET) + Dockerfile |
+| [StudioSport-client](https://github.com/ruthk4126-spec/StudioSport-client) | דפי הלקוח (HTML/CSS/JS) |
+
+הלקוח מדבר עם השרת דרך HTTP (JWT + CORS). כתובת השרת מוגדרת בקובץ `js/config.js` שבריפו הלקוח.
+
+### הרצת השרת
 
 **דרישות מוקדמות:** .NET 10 SDK, PostgreSQL 17 פועל על `localhost:5432`.
 
 ```powershell
+git clone https://github.com/ruthk4126-spec/StudioSport-server.git
+cd StudioSport-server
 dotnet restore
 dotnet build
 
@@ -78,31 +91,39 @@ dotnet ef database update -p StudioSport.Data -s StudioSport.API
 dotnet run --project StudioSport.API --urls http://localhost:5170
 ```
 
-**Swagger:** `http://localhost:5170/swagger`
+**Swagger:** `http://localhost:5170/swagger` · **בדיקת חיים:** `http://localhost:5170/health`
 
-ה-Seed (`DbSeeder.SeedAsync`) רץ אוטומטית בעליית השרת: הוא מריץ מיגרציות, ואם הטבלאות ריקות — יוצר משתמשים, מנוי פעיל, מדריכות ושיעורים. אין צורך בהתערבות ידנית בבסיס הנתונים אחרי `database update`.
+ה-Seed (`DbSeeder.SeedAsync`) רץ אוטומטית בעליית השרת: הוא מריץ מיגרציות, ואם הטבלאות ריקות — יוצר משתמשים, מנוי פעיל, מדריכות ושיעורים.
 
 ### הרצת הלקוח
 
-הלקוח נמצא בריפו נפרד: **StudioSport-client**. הוא פונה ל-API ב-`http://localhost:5170`
-(מוגדר ב-`js/config.js` שבו). יש להריץ את השרת קודם:
-
 ```powershell
-dotnet run --project StudioSport.API --urls http://localhost:5170
+git clone https://github.com/ruthk4126-spec/StudioSport-client.git
+cd StudioSport-client
+python -m http.server 5500
 ```
+
+הלקוח נפתח ב-`http://localhost:5500` ופונה ל-`http://localhost:5170/api`
+(מוגדר ב-`js/config.js`). יש להריץ את השרת קודם.
 
 ## פריסה (Render)
 
-**שירות 1 — השרת (Web Service):**
+| שירות | סוג | ריפו | הגדרה |
+|---|---|---|---|
+| Server | Web Service | `StudioSport-server` | Docker, `GET /health` |
+| Client | Static Site | `StudioSport-client` | Build Command ריק, Publish Directory `.` |
 
-- Dockerfile: `./Dockerfile` (בשורש הריפו)
-- משתני סביבה:
-  - `ConnectionStrings__Default` — מחרוזת החיבור ל-PostgreSQL
-  - `Jwt__Key` — מפתח סודי באורך 32 תווים לפחות
-  - `Cors__AllowedOrigins__0` — כתובת שירות הלקוח, למשל `https://<client-service>.onrender.com`
-- בדיקת חיים: `GET /health`
+**משתני סביבה של השרת:**
 
-**שירות 2 — הלקוח (Static Site):** ראו את ה-`README` בריפו `StudioSport-client`.
+- `ConnectionStrings__Default` — מחרוזת החיבור ל-PostgreSQL
+- `Jwt__Key` — מפתח סודי באורך 32 תווים לפחות
+- `Cors__AllowedOrigins__0` — כתובת שירות הלקוח, למשל `https://<client-service>.onrender.com`
+
+לאחר עליית הלקוח: עדכנו ב-`js/config.js` את `API_BASE` לכתובת השרת. לדוגמה:
+
+```js
+window.STUDIO_CONFIG = { API_BASE: "https://<server-service>.onrender.com/api" };
+```
 
 ## משתמשי דמו
 
